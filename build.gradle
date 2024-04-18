@@ -18,16 +18,53 @@ repositories {
 }
 
 dependencies {
+    // Spring
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    compileOnly 'org.projectlombok:lombok'
-    runtimeOnly 'com.h2database:h2'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+    // DataBase
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    runtimeOnly 'com.h2database:h2'
+
+    // Querydsl
+    // 1. QuerydslRepositorySupport 등의 QueryDSL 내부클래스 사용을 위한 라이브러리
+    implementation group: 'com.querydsl', name: 'querydsl-jpa'
+    // 2. QClass 를 생성하기 위한 라이브러리 (Querydsl JPAAnnotationProcessor 사용 지정)
+    annotationProcessor group: 'com.querydsl', name: 'querydsl-apt', version: "${dependencyManagement.importedProperties['querydsl.version']}", classifier: 'jpa'
+
+    // java.lang.NoClassDefFoundError(javax.persistence.Entity) 발생 대응
+    annotationProcessor "jakarta.persistence:jakarta.persistence-api"
+
+    // ETC
+    compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+
+    // TEST
     testImplementation('org.springframework.boot:spring-boot-starter-test') {
         exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
     }
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Qclass 생성 경로
+def queryDslDir= "src/main/generated"
+
+// build시 사용할 sourceSet 추가 설정 (src/main/java 디렉터리 외의 파일 빌드 target)
+sourceSets {
+    main.java.srcDirs += [queryDslDir]
+}
+
+// 컴파일 옵션
+tasks.withType(JavaCompile) {
+    options.annotationProcessorGeneratedSourcesDirectory = file(queryDslDir)
+}
+
+clean.doLast {
+    file(queryDslDir).deleteDir()
 }
