@@ -7,7 +7,8 @@ public enum PromotionType implements BaseEnum {
   CODE("CODE", "코드"),
   COUPON("COUPON", "쿠폰");
 
-  @JsonValue private final String code;
+  @JsonValue
+  private final String code;
   private final String label;
 
   PromotionType(String code, String label) {

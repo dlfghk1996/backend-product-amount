@@ -19,7 +19,7 @@ public class QPromotion extends EntityPathBase<Promotion> {
 
     public static final QPromotion promotion = new QPromotion("promotion");
 
-    public final StringPath discountType = createString("discountType");
+    public final EnumPath<antigravity.enums.DiscountType> discountType = createEnum("discountType", antigravity.enums.DiscountType.class);
 
     public final NumberPath<Integer> discountValue = createNumber("discountValue", Integer.class);
 
@@ -27,7 +27,7 @@ public class QPromotion extends EntityPathBase<Promotion> {
 
     public final StringPath name = createString("name");
 
-    public final StringPath promotionType = createString("promotionType");
+    public final EnumPath<antigravity.enums.PromotionType> promotionType = createEnum("promotionType", antigravity.enums.PromotionType.class);
 
     public final DateTimePath<java.util.Date> useEndedAt = createDateTime("useEndedAt", java.util.Date.class);
 

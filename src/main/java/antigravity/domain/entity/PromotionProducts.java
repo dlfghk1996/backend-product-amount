@@ -19,8 +19,7 @@ import lombok.ToString;
 
 
 @Getter
-@Setter
-@ToString(exclude = "product")
+@ToString
 @Entity
 @Builder
 @NoArgsConstructor
@@ -36,6 +35,6 @@ public class PromotionProducts {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
-    @JsonBackReference
+    //@JsonBackReference
     private Product product;
 }
