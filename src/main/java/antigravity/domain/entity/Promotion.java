@@ -1,11 +1,11 @@
 package antigravity.domain.entity;
 
 import antigravity.common.enums.ResponseCode;
-import antigravity.common.exception.AntigravityException;
+import antigravity.common.exception.BizException;
 import antigravity.common.util.DateUtil;
 import antigravity.enums.DiscountType;
 import antigravity.enums.PromotionType;
-import java.util.stream.IntStream;
+import java.time.LocalDate;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
@@ -15,12 +15,9 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 
-import java.util.Date;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Getter
 @Entity
@@ -45,18 +42,16 @@ public class Promotion {
 
     private int discountValue; // 할인 금액 or 할인 %
 
-    private Date useStartedAt; // 쿠폰 사용가능 시작 기간
+    private LocalDate useStartedAt; // 쿠폰 사용가능 시작 기간
 
-    private Date useEndedAt; // 쿠폰 사용가능 종료 기간
+    private LocalDate useEndedAt; // 쿠폰 사용가능 종료 기간
 
-
-    public void isAvailableDate(){
-
-        System.out.println(this.useStartedAt);
-
-        System.out.println(this.useEndedAt);
-        if(DateUtil.isBetweenCurrentDate(this.useStartedAt, this.useEndedAt)){
-            throw new AntigravityException(ResponseCode.INVALID_PROMOTION);
+    /**
+     * 프로모션 유효기간 검사
+     */
+    public void isAvailableDate() {
+        if (DateUtil.isBetweenCurrentDate(this.useStartedAt, this.useEndedAt)) {
+            throw new BizException(ResponseCode.INVALID_PROMOTION);
         }
     }
 }

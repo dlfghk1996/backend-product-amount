@@ -29,9 +29,9 @@ public class QPromotion extends EntityPathBase<Promotion> {
 
     public final EnumPath<antigravity.enums.PromotionType> promotionType = createEnum("promotionType", antigravity.enums.PromotionType.class);
 
-    public final DateTimePath<java.util.Date> useEndedAt = createDateTime("useEndedAt", java.util.Date.class);
+    public final DatePath<java.time.LocalDate> useEndedAt = createDate("useEndedAt", java.time.LocalDate.class);
 
-    public final DateTimePath<java.util.Date> useStartedAt = createDateTime("useStartedAt", java.util.Date.class);
+    public final DatePath<java.time.LocalDate> useStartedAt = createDate("useStartedAt", java.time.LocalDate.class);
 
     public QPromotion(String variable) {
         super(Promotion.class, forVariable(variable));

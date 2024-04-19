@@ -20,7 +20,6 @@ public enum DiscountType implements BaseEnum {
     }
 
     public int calculate(int price, int discountPrice){
-        System.out.println("calculate 진입");
         return expression.apply(price, discountPrice);
     }
 

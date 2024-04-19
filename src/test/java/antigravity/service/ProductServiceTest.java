@@ -1,64 +1,43 @@
 package antigravity.service;
 
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.assertj.core.api.Java6Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
-
 import antigravity.common.enums.ResponseCode;
-import antigravity.common.exception.AntigravityException;
+import antigravity.common.exception.BizException;
+import antigravity.common.util.MathUtil;
 import antigravity.domain.entity.Product;
 import antigravity.domain.entity.Promotion;
 import antigravity.domain.entity.PromotionProducts;
 import antigravity.enums.DiscountType;
 import antigravity.enums.PromotionType;
 import antigravity.model.request.ProductInfoRequest;
-import antigravity.model.response.ProductAmountResponse;
 import antigravity.repository.ProductRepository;
 import antigravity.repository.PromotionProductsRepository;
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.BDDMockito.Then;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.Spy;
-import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+@DisplayName("상품 프로모션 적용 가격 테스트")
 @ExtendWith(SpringExtension.class)
 class ProductServiceTest {
 
-    //@Mock
     @Spy
+    @InjectMocks
     private ProductService productService;
 
     @Mock
@@ -69,163 +48,174 @@ class ProductServiceTest {
 
     private Product product;
 
-    private List<PromotionProducts> promotionProducts;
+    private List<PromotionProducts> promotionProductsList;
 
     private ProductInfoRequest productInfoRequest;
 
+    // Test Value
+    private LocalDate useStartedAt = LocalDate.now().minusDays(1);
+    private LocalDate useEndedAt = LocalDate.now().plusDays(1);
+
+    // 값 초기화
     @BeforeEach
     void setUp() {
         product = Product.builder()
             .name("피팅노드상품")
             .id(1)
-            .price(215000)
+            .price(50000)
             .build();
 
         productInfoRequest = ProductInfoRequest.builder()
-            .productId(1)
-            .couponIds(new int[] {1, 2})
+            .productId(2)
+            .couponIds(new int[]{1, 2})
             .build();
 
-        promotionProducts = Arrays.asList(
-            new PromotionProducts(1, new Promotion(), product),
-            new PromotionProducts(2, new Promotion(), product)
+        promotionProductsList = Arrays.asList(
+            new PromotionProducts(1, createPromotionForCode(useStartedAt, useEndedAt), product),
+            new PromotionProducts(2, createPromotionForCoupon(useStartedAt, useEndedAt), product)
         );
     }
 
     @Nested
-    @DisplayName("요청값 유효성 검사")
+    @DisplayName("사용자 요청값 유효성 검사")
     class request_value_invalid_test {
+
         @Test
-        @DisplayName("존재하지 않는 상품일 경우 InvalidRequestException 발생.")
+        @DisplayName("존재하지 않는 상품일 경우 INVALID_REQUEST ResponseCode 반환.")
         void product_not_exists_exception_test() {
-            when(productRepository.findById(anyInt()))
-                .thenThrow(NullPointerException.class);
 
-            // then
-            AntigravityException e = assertThrows(
-                AntigravityException.class, () -> productRepository.findById(0));
+            when(productRepository.findById(product.getId())).thenReturn(Optional.ofNullable(product));
 
-            assertThat(e.getErrorCode()).isEqualTo(ResponseCode.INVALID_REQUEST.getLabel());
+            Optional<Product> optProduct = productRepository.findById(productInfoRequest.getProductId());
+            BizException e = assertThrows(BizException.class
+                , () -> optProduct.orElseThrow(()->new BizException(ResponseCode.INVALID_REQUEST))
+                , "요청한 상품이 존재합니다.");
+
+            assertThat(e.getResponseCode()).isEqualTo(ResponseCode.INVALID_REQUEST);
         }
 
         @Test
-        @DisplayName("해당 상품에 적용된 프로모션이 없을 경우 ProductPromotionNotFountException 발생.")
+        @DisplayName("해당 상품에 적용된 프로모션이 없을 경우 PRODUCT_PROMOTION_NOT_FOUND ResponseCode 반환.")
         void product_not_exists_promotion_test() {
-            // given
-            doReturn(promotionProducts).when(promotionProductsRepository).getProductPromotion(anyInt(), anyList());
 
-            // when
-            List<Promotion> promotionList = promotionProductsRepository
-                .getProductPromotion(0,null)
-                .get()
-                .stream()
-                .map(PromotionProducts::getPromotion)
+            List<Integer> reqList = IntStream.of(productInfoRequest.getCouponIds())
+                .boxed()
                 .collect(Collectors.toList());
 
-            boolean noneMatchFlag1 = promotionList.containsAll(
-                IntStream.of(productInfoRequest.getCouponIds())
-                .boxed()
-                .collect(Collectors.toList()));
+            when(promotionProductsRepository.getProductPromotion(
+                product.getId(),
+                promotionProductsList.stream().map(pp->pp.getPromotion().getId()).collect(Collectors.toList())))
+                .thenReturn(Optional.ofNullable(promotionProductsList));
 
-            boolean noneMatchFlag2 = promotionProducts.stream()
-                .filter(pp-> Arrays.stream(productInfoRequest.getCouponIds()).noneMatch(req ->pp.getPromotion().getId() == req))
-                .count() > 0;
+            Optional<List<PromotionProducts>> optProduct = promotionProductsRepository.getProductPromotion(product.getId(), reqList);
 
-            // then
-            AntigravityException e = assertThrows(
-                AntigravityException.class, () ->  assertThat(noneMatchFlag2).isTrue());
+            BizException e = assertThrows(BizException.class
+                , () -> optProduct.orElseThrow(()->new BizException(ResponseCode.PRODUCT_PROMOTION_NOT_FOUND)));
 
-            assertThat(e.getErrorCode()).isEqualTo(ResponseCode.PRODUCT_PROMOTION_NOT_FOUND.getLabel());
+            assertThat(e.getResponseCode()).isEqualTo(ResponseCode.PRODUCT_PROMOTION_NOT_FOUND);
         }
     }
 
-
+    // TODO 여기서부터 test
     @Nested
     @DisplayName("쿠폰 적용 가능 여부 검사")
     class promotion_invalid_test {
 
         // 상품의 최소 금액보다 작은 경우 에러반환 (product)
-        @Test
-        @DisplayName("상품 금액 검사")
-        void product_not_exists_exception_test() {
+        @Nested
+        @DisplayName("isValidPrice 메소드는 ")
+        class isValidPrice {
 
-            AntigravityException exception = assertThrows(AntigravityException.class, ()-> product.isValidPrice());
+            @Test
+            @DisplayName("상품 금액이 최소 금액 미만이면 MIN_PRODUCT_PRICE ResponseCode 반환")
+            void product_price_min_text() {
+                BizException exception = assertThrows(BizException.class,
+                    () -> product.isValidPrice());
+                assertEquals(ResponseCode.MIN_PRODUCT_PRICE, exception.getErrorCode());
+            }
 
-            assertEquals(ResponseCode.MIN_PRODUCT_PRICE, exception.getErrorCode()); // 상품 최소 금액 미달
-            assertEquals(ResponseCode.MAX_PRODUCT_PRICE, exception.getErrorCode()); // 상품 최대 금액 초과
+            @Test
+            @DisplayName("상품 금액이 최대 금액 이상이면 MAX_PRODUCT_PRICE ResponseCode 반환")
+            void product_price_max_text() {
+                BizException exception = assertThrows(BizException.class,
+                    () -> product.isValidPrice());
+                assertEquals(ResponseCode.MAX_PRODUCT_PRICE, exception.getErrorCode());
+            }
         }
 
         @Test
-        @DisplayName("쿠폰 사용 기한 검사")
+        @DisplayName("쿠폰 사용 기간이 유효하지 않으면 INVALID_PROMOTION ResponseCode 반환")
         void promotion_test() {
-            promotionProducts.forEach(p-> {
-                AntigravityException exception = assertThrows(AntigravityException.class,
-                    () -> p.getPromotion().isAvailableDate());
-                assertEquals(ResponseCode.INVALID_PROMOTION, exception.getErrorCode());
-            });
+            LocalDateTime testDate = LocalDateTime.now().plusDays(2);
+            BizException exception = assertThrows(BizException.class,
+                () ->  promotionProductsList.forEach(pp-> pp.getPromotion().isAvailableDate()));
+
+            assertEquals(ResponseCode.MAX_PRODUCT_PRICE, exception.getErrorCode());
+        }
+    }
+    @Nested
+    @DisplayName("프로모션 적용 가격 계산")
+    class final_product_price{
+        @Test
+        @DisplayName("DISCOUNT TYPE 별 할인율 계산 테스트")
+        void product_promotion_price_test() {
+            int discountPriceByPercent = DiscountType.PERCENT.calculate(product.getPrice(),30);
+            assertEquals(discountPriceByPercent, 15000);
+
+            int discountPriceByWon = DiscountType.WON.calculate(product.getPrice(),30000);
+            assertEquals(discountPriceByWon, 30000);
+
+            int totalDiscountPrice = promotionProductsList.stream()
+                .mapToInt(pp-> pp.getPromotion().getDiscountType()
+                    .calculate(product.getPrice(), pp.getPromotion().getDiscountValue()))
+                .sum();
+
+            // 최종 할인 금액
+            assertEquals((discountPriceByPercent+discountPriceByWon), totalDiscountPrice);
+        }
+        @Test
+        @DisplayName("절삭 테스트.")
+        void price_round_test() {
+            assertThat(MathUtil.roundNumber(185200, -3)).isEqualTo(185000);
+        }
+
+        @Test
+        @DisplayName("최종가격을 반환한다.")
+        void when_priceInformationIsValid_then_returnFinalPrice() {
+            int discountPrice = 18000;
+            assertThat(product.calculateFinalPrice(discountPrice))
+                .isEqualTo(MathUtil.roundNumber(product.getPrice()-discountPrice,-3));
         }
     }
 
 
-    // 할인율 구하기 (DiscountType)
-    @Test
-    @DisplayName("최종 상품 금액 테스트")
-    void product_promotion_price_test() {
-        int discountPriceByPercent = DiscountType.PERCENT.calculate(product.getPrice(),30);
-        int discountPriceByWon = DiscountType.WON.calculate(product.getPrice(),30000);
 
-        int totalDiscountPrice = promotionProducts.stream()
-            .mapToInt(pp-> pp.getPromotion().getDiscountType().calculate(product.getPrice(), pp.getPromotion().getDiscountValue()))
-            .sum();
-
-        // 최종 할인 금액
-        assertEquals(discountPriceByPercent+discountPriceByWon, discountPriceByWon);
-
-        assertNotEquals(product.getPrice(), product.getFinalPrice(totalDiscountPrice));
-    }
-
-
-
-    // 상품 조회값 설정
-    private Product product() {
-        return Product.builder()
-            .id(1)
-            .name("")
-            .price(1000).build();
-    }
-
-    private Promotion createPromotion() {
+    private Promotion createPromotionForCode(LocalDate useStartedAt, LocalDate useEndedAt) {
         return Promotion.builder()
             .id(1)
             .promotionType(PromotionType.COUPON)
             .discountType(DiscountType.PERCENT)
-            .discountValue(1000)
-            .useStartedAt(new Date())
-            .useEndedAt(new Date())
-            .name("a")
+            .discountValue(3000)
+            .useStartedAt(useStartedAt)
+            .useEndedAt(useEndedAt)
+            .name("30000원 할인쿠폰")
             .build();
     }
-
-//    @Test
-//    void getProductAmount() {
-//        // Given : 어떠한 데이터가 주어질 때.
-//        // When : 어떠한 기능을 실행하면.
-//        // Then : 어떠한 결과를 기대한다.
-//        System.out.println("상품 가격 추출 테스트");
 //
-//        // 제어할 수 없는 값이 비즈니스 로직에 사용되기 떄문에 테스트하기 어렵다.
-//        it('일요일에는 주문 금액이 10% 할인된다', () => {
-//    const sut = Order.of(10_000, OrderStatus.APPROVAL);
-//
-//        sut.discount();
-//
-//        expect(sut.amount).toBe(9_000);
-//})
-//    }
-
-// 데이터베이스를 사용하는 테스트들은 느린 테스트의 주범이다.
-
+     Promotion createPromotionForCoupon(LocalDate useStartedAt, LocalDate useEndedAt) {
+        return Promotion.builder()
+            .id(2)
+            .promotionType(PromotionType.COUPON)
+            .discountType(DiscountType.WON)
+            .discountValue(15)
+            .useStartedAt(useStartedAt)
+            .useEndedAt(useEndedAt)
+            .name("15% 할인코드")
+            .build();
+    }
 }
+
+
 
 //@ParameterizedTest
 //@Nested

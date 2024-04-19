@@ -1,19 +1,18 @@
 package antigravity.common.util;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalDate;
 
 public class DateUtil {
 
     /**
-     * 현재시간이 주어진 날짜 사이인지 비교
+     * 오늘 일자가 startDate 와 endDate 의 범위 내에 있는지 검사
      *
-     * @param startDate
-     * @param endDate
-     * @return
+     * @param startDate LocalDate
+     * @param endDate LocalDate
+     * @return boolean
      */
-    public static boolean isBetweenCurrentDate(Date startDate, Date endDate) {
-        return startDate.after(new Date())
-            && endDate.before(new Date());
+    public static boolean isBetweenCurrentDate(LocalDate startDate, LocalDate endDate) {
+        return startDate.isBefore(LocalDate.now())
+            && endDate.isAfter(LocalDate.now());
     }
 }

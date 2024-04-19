@@ -1,13 +1,12 @@
 package antigravity.domain.entity;
 
 import antigravity.common.enums.ResponseCode;
-import antigravity.common.exception.AntigravityException;
-import java.math.BigDecimal;
+import antigravity.common.exception.BizException;
+import antigravity.common.util.MathUtil;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -27,26 +26,25 @@ public class Product {
     private String name;
     private int price;
 
-    // 최소 상품가격, 최대 상품가격 검사
-    public void isValidPrice(){
-        if(price < 10000) {
-            throw new AntigravityException(ResponseCode.MIN_PRODUCT_PRICE);
-        }else if(price > 10000000) {
-            throw new AntigravityException(ResponseCode.MAX_PRODUCT_PRICE);
+    /**
+     * 최소 상품가격, 최대 상품가격 검사
+     */
+    public void isValidPrice() {
+        if (price < 10000) {
+            throw new BizException(ResponseCode.MIN_PRODUCT_PRICE);
+        } else if (price > 10000000) {
+            throw new BizException(ResponseCode.MAX_PRODUCT_PRICE);
         }
     }
 
     /**
-     * 천단위 절삭 계산
-     * @return 확정 상품 가격
+     * 최종 가격 계산
+     *
+     * @param totalDiscountPrice int
+     * @return int
      */
-    public int getFinalPrice(int totalDiscountPrice){
+    public int calculateFinalPrice(int totalDiscountPrice) {
         int finalPrice = this.price - totalDiscountPrice;
-        System.out.println(finalPrice);
-        if(finalPrice > 0) {
-            BigDecimal conversionPrice = new BigDecimal(finalPrice);
-            return conversionPrice.setScale(-3, BigDecimal.ROUND_DOWN).intValue();
-        }
-        return 0;
+        return finalPrice > 0 ? MathUtil.roundNumber(finalPrice, 1000) : 0;
     }
 }
