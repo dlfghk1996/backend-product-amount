@@ -35,6 +35,5 @@ public class PromotionProducts {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id")
-    //@JsonBackReference
     private Product product;
 }

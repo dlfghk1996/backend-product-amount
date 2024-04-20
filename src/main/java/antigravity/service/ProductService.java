@@ -10,6 +10,7 @@ import antigravity.model.response.ProductAmountResponse;
 import antigravity.repository.ProductRepository;
 import antigravity.repository.PromotionProductsRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
@@ -46,18 +47,24 @@ public class ProductService {
                 IntStream.of(request.getCouponIds()).boxed().collect(Collectors.toList()))
             .orElseThrow(() -> new BizException(ResponseCode.PRODUCT_PROMOTION_NOT_FOUND));
 
-        // 4. 프로모션 적용
+        // 4. 요청값 유효성 검사
+        if(promotionProductsList.size() != request.getCouponIds().length){
+            throw new BizException(ResponseCode.INVALID_REQUEST_PROMOTION);
+        }
+
+        // 5. 프로모션 적용
         int discountPrice = 0;
+
         for (PromotionProducts promotionProducts : promotionProductsList) {
             Promotion promotion = promotionProducts.getPromotion();
-            // 4-1. 프로모션 기간 유효성 검사
+            // 5-1. 프로모션 기간 유효성 검사
             promotion.isAvailableDate();
-            // 4-2. 총 할인가격 계산
-            discountPrice += promotion.getDiscountType()
+            // 5-2. 총 할인가격 계산
+            discountPrice += promotion.getPromotionType()
                 .calculate(originPrice, promotion.getDiscountValue());
         }
 
-        // 5. 프로모션 적용 상품 정보 반환
+        // 6. 프로모션 적용 상품 정보 반환
         return ProductAmountResponse.builder()
             .name(product.getName())
             .originPrice(originPrice)

@@ -43,7 +43,7 @@ public class ControllerAdvice {
         return new ResponseEntity<>(new ErrorResponse(ResponseCode.ERROR),HttpStatus.OK);
     }
 
-    @ExceptionHandler({SQLException.class, DataAccessException.class})
+    @ExceptionHandler({SQLException.class})
     public ResponseEntity<?> handleSQLException(Exception e) {
 
         return new ResponseEntity<>(new ErrorResponse(ResponseCode.ERROR_SQL),HttpStatus.OK);

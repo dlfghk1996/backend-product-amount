@@ -1,31 +1,25 @@
 package antigravity.enums;
 
-import antigravity.common.enums.BaseEnum;
-import com.fasterxml.jackson.annotation.JsonValue;
 
-public enum PromotionType implements BaseEnum {
-  CODE("CODE", "코드"),
-  COUPON("COUPON", "쿠폰");
+import java.util.function.BiFunction;
 
-  @JsonValue
-  private final String code;
+public enum PromotionType {
+  COUPON("COUPON", (price, discountPrice) -> discountPrice),
+  CODE("CODE", (price, discountPrice) -> (int) (price * (discountPrice * 0.01)));
+
   private final String label;
 
-  PromotionType(String code, String label) {
-    this.code = code;
+  private BiFunction<Integer, Integer, Integer> expression;
+
+  PromotionType(String label, BiFunction<Integer, Integer, Integer> expression) {
     this.label = label;
+    this.expression = expression;
   }
 
-  public String getCode() {
-    return this.code;
+  public int calculate(int price, int discountPrice){
+    return expression.apply(price, discountPrice);
   }
 
-  @Override
-  public String getName() {
-    return this.name();
-  }
-
-  @Override
   public String getLabel() {
     return this.label;
   }

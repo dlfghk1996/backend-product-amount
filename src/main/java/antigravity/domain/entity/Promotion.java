@@ -50,8 +50,8 @@ public class Promotion {
      * 프로모션 유효기간 검사
      */
     public void isAvailableDate() {
-        if (DateUtil.isBetweenCurrentDate(this.useStartedAt, this.useEndedAt)) {
-            throw new BizException(ResponseCode.INVALID_PROMOTION);
+        if (!DateUtil.isBetweenCurrentDate(this.useStartedAt, this.useEndedAt)) {
+            throw new BizException(ResponseCode.INVALID_PROMOTION_DATE);
         }
     }
 }

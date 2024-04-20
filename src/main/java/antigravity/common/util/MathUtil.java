@@ -22,7 +22,8 @@ public class MathUtil {
             scale = scale / 10;
             count++;
         }
+
         BigDecimal conversionPrice = new BigDecimal(number);
-        return conversionPrice.setScale(count * -1, BigDecimal.ROUND_DOWN).intValue();
+        return conversionPrice.setScale((count-1) * -1, BigDecimal.ROUND_DOWN).intValue();
     }
 }

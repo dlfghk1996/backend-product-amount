@@ -53,8 +53,8 @@ class ProductServiceTest {
     private ProductInfoRequest productInfoRequest;
 
     // Test Value
-    private LocalDate useStartedAt = LocalDate.now().minusDays(1);
-    private LocalDate useEndedAt = LocalDate.now().plusDays(1);
+    private LocalDate useStartedAt = LocalDate.now().minusDays(3);
+    private LocalDate useEndedAt = LocalDate.now().plusDays(3);
 
     // 값 초기화
     @BeforeEach
@@ -62,7 +62,7 @@ class ProductServiceTest {
         product = Product.builder()
             .name("피팅노드상품")
             .id(1)
-            .price(50000)
+            .price(215000)
             .build();
 
         productInfoRequest = ProductInfoRequest.builder()
@@ -116,7 +116,6 @@ class ProductServiceTest {
         }
     }
 
-    // TODO 여기서부터 test
     @Nested
     @DisplayName("쿠폰 적용 가능 여부 검사")
     class promotion_invalid_test {
@@ -131,7 +130,7 @@ class ProductServiceTest {
             void product_price_min_text() {
                 BizException exception = assertThrows(BizException.class,
                     () -> product.isValidPrice());
-                assertEquals(ResponseCode.MIN_PRODUCT_PRICE, exception.getErrorCode());
+                assertEquals(ResponseCode.MIN_PRODUCT_PRICE, exception.getResponseCode());
             }
 
             @Test
@@ -139,44 +138,44 @@ class ProductServiceTest {
             void product_price_max_text() {
                 BizException exception = assertThrows(BizException.class,
                     () -> product.isValidPrice());
-                assertEquals(ResponseCode.MAX_PRODUCT_PRICE, exception.getErrorCode());
+                assertEquals(ResponseCode.MAX_PRODUCT_PRICE, exception.getResponseCode());
             }
         }
 
         @Test
         @DisplayName("쿠폰 사용 기간이 유효하지 않으면 INVALID_PROMOTION ResponseCode 반환")
         void promotion_test() {
-            LocalDateTime testDate = LocalDateTime.now().plusDays(2);
             BizException exception = assertThrows(BizException.class,
                 () ->  promotionProductsList.forEach(pp-> pp.getPromotion().isAvailableDate()));
 
-            assertEquals(ResponseCode.MAX_PRODUCT_PRICE, exception.getErrorCode());
+            assertEquals(ResponseCode.INVALID_PROMOTION_DATE, exception.getResponseCode());
         }
     }
     @Nested
     @DisplayName("프로모션 적용 가격 계산")
     class final_product_price{
         @Test
-        @DisplayName("DISCOUNT TYPE 별 할인율 계산 테스트")
+        @DisplayName("PROMOTION TYPE 별 할인율 계산 테스트")
         void product_promotion_price_test() {
-            int discountPriceByPercent = DiscountType.PERCENT.calculate(product.getPrice(),30);
-            assertEquals(discountPriceByPercent, 15000);
+            int discountPriceByPercent = PromotionType.CODE.calculate(product.getPrice(),30);
+            assertEquals(discountPriceByPercent, 150500);
 
-            int discountPriceByWon = DiscountType.WON.calculate(product.getPrice(),30000);
+            int discountPriceByWon = PromotionType.COUPON.calculate(product.getPrice(),30000);
             assertEquals(discountPriceByWon, 30000);
 
             int totalDiscountPrice = promotionProductsList.stream()
-                .mapToInt(pp-> pp.getPromotion().getDiscountType()
+                .mapToInt(pp-> pp.getPromotion().getPromotionType()
                     .calculate(product.getPrice(), pp.getPromotion().getDiscountValue()))
                 .sum();
 
             // 최종 할인 금액
             assertEquals((discountPriceByPercent+discountPriceByWon), totalDiscountPrice);
         }
+
         @Test
-        @DisplayName("절삭 테스트.")
+        @DisplayName("단위 기준 절삭 테스트")
         void price_round_test() {
-            assertThat(MathUtil.roundNumber(185200, -3)).isEqualTo(185000);
+            assertThat(MathUtil.roundNumber(185200, 1000)).isEqualTo(185000);
         }
 
         @Test
@@ -184,11 +183,9 @@ class ProductServiceTest {
         void when_priceInformationIsValid_then_returnFinalPrice() {
             int discountPrice = 18000;
             assertThat(product.calculateFinalPrice(discountPrice))
-                .isEqualTo(MathUtil.roundNumber(product.getPrice()-discountPrice,-3));
+                .isEqualTo(MathUtil.roundNumber(product.getPrice()-discountPrice,1000));
         }
     }
-
-
 
     private Promotion createPromotionForCode(LocalDate useStartedAt, LocalDate useEndedAt) {
         return Promotion.builder()
@@ -201,7 +198,7 @@ class ProductServiceTest {
             .name("30000원 할인쿠폰")
             .build();
     }
-//
+
      Promotion createPromotionForCoupon(LocalDate useStartedAt, LocalDate useEndedAt) {
         return Promotion.builder()
             .id(2)
@@ -214,57 +211,3 @@ class ProductServiceTest {
             .build();
     }
 }
-
-
-
-//@ParameterizedTest
-//@Nested
-//@ParameterizedTest
-//@ValueSource(ints = {1, 10, 100})
-//void generate_with_user_id(int userId) {
-//    final String expected = String.format("FOO230101%05d00004", userId);
-//
-//    final String actual = purchaseOrderIdGenerator.generateId(
-//        userId,
-//        0,
-//        3
-//    );
-//    assertThat(actual).isEqualTo(expected);
-//}
-//
-//assertThat(splitArray).containsExactly("1");
-//@Test
-//@DisplayName("쿠폰 사용 기한이 맞지 않거나 상품에 사용할 수 없는 쿠폰일 경우 에러반환")
-//void test_05() {
-//    int[] list = {5};
-//
-//    ProductInfoRequest request = new ProductInfoRequest(1, list);
-//    PromotionDTO promotionDTO = new PromotionDTO(1, "COUPON", "30000원 할인쿠폰", "WON", 30000);
-//    Date today = new Date();
-//    String StrDate = "20220202";
-//    String EndDate = "20230505";
-//    Promotion promotion;
-//    SimpleDateFormat from = new SimpleDateFormat("yyyyMMdd");
-//    try {
-//        Date SDate = from.parse(StrDate);
-//        Date EDate = from.parse(EndDate);
-//
-//        promotion = new Promotion(1, "COUPON", "30000원 할인쿠폰", "WON", 30000, SDate,EDate);
-//
-//    } catch (ParseException e) {
-//        throw new RuntimeException(e);
-//    }
-//
-//    when(productRepository.findById(request.getProductId())).thenReturn(Optional.of(new Product(1, "피팅노드상품", 215000)));
-//    when(promotionProductRepository.findServiceAblePromotion(request.getProductId(),1,today)).thenReturn(Optional.of(promotionDTO));
-//    AntiGravityApplicationException exception = Assertions.assertThrows(AntiGravityApplicationException.class
-//        , () -> productService.getProductAmount(request));
-//
-//    Assertions.assertEquals(ErrorCode.COUPON_IS_NOT_AVAILABLE, exception.getErrorCode());
-//
-//}
-//@ParameterizedTest
-//@ValueSource(ints = {1, 3, 5, -3, 15, Integer.MAX_VALUE}) // six numbers
-//void isOdd_ShouldReturnTrueForOddNumbers(int number) {
-//    assertTrue(Numbers.isOdd(number));
-//}

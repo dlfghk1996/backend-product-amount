@@ -12,7 +12,7 @@ public class DateUtil {
      * @return boolean
      */
     public static boolean isBetweenCurrentDate(LocalDate startDate, LocalDate endDate) {
-        return startDate.isBefore(LocalDate.now())
-            && endDate.isAfter(LocalDate.now());
+        LocalDate today = LocalDate.now();
+        return startDate.compareTo(today) <= 0 && !(endDate.compareTo(today) < 0);
     }
 }

@@ -44,7 +44,7 @@ public class Product {
      * @return int
      */
     public int calculateFinalPrice(int totalDiscountPrice) {
-        int finalPrice = this.price - totalDiscountPrice;
-        return finalPrice > 0 ? MathUtil.roundNumber(finalPrice, 1000) : 0;
+
+      return  this.price > totalDiscountPrice ? MathUtil.roundNumber( (this.price - totalDiscountPrice), 1000) : 0;
     }
 }
